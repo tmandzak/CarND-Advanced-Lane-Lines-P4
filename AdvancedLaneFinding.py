@@ -1,14 +1,17 @@
 import numpy as np
 import cv2
 import glob
+import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
 class AdvancedLaneFinding:
-    def __init__(self, cal_images, cal_nx, cal_ny):
-        self.cal_images = cal_images
+    def __init__(self, cal_images, cal_nx, cal_ny, test_images):
+        self.cal_images = [mpimg.imread(img) for img in glob.glob(cal_images)] 
         self.cal_nx = cal_nx
         self.cal_ny = cal_ny
         self.findChessboardCorners()
+        
+        self.test_images = [mpimg.imread(img) for img in glob.glob(test_images)]
         
         
     # Camera calibration
@@ -22,14 +25,12 @@ class AdvancedLaneFinding:
         self.imgpoints = [] # 2d points in image plane.
 
         # Make a list of calibration images
-        images = glob.glob(self.cal_images)
         self.corners_images = []
         self.corners_images_failed = []
 
         # Step through the list and search for chessboard corners
-        for fname in images:
-            img = cv2.imread(fname)
-            gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        for img in self.cal_images:
+            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
             # Find the chessboard corners
             ret, corners = cv2.findChessboardCorners(gray, (self.cal_nx, self.cal_ny), None)
@@ -73,8 +74,15 @@ class AdvancedLaneFinding:
     def calibrateCamera(self, img_size):
         ret, self.mtx, self.dist, rvecs, tvecs = cv2.calibrateCamera(self.objpoints, self.imgpoints, img_size, None, None)
         
-    def undistort(self, img):
-        return cv2.undistort(img, self.mtx, self.dist, None, self.mtx)
+    def undistort(self, img_input):
+        if type(img_input) == list:
+            img_otput = []
+            for img in img_input:
+                img_otput.append(cv2.undistort(img, self.mtx, self.dist, None, self.mtx))
+        else:
+            img_otput = cv2.undistort(img_input, self.mtx, self.dist, None, self.mtx)
+                
+        return img_otput
     
     # Test undistortion on an image
     def draw_test_undistort(self, test_image):
@@ -84,3 +92,76 @@ class AdvancedLaneFinding:
         dst = self.undistort(img)
         # Visualize undistortion
         self._draw_images(images=[img, dst], titles=['Original Image', 'Undistorted Image'])
+        
+    def _combinelists(self, l1, l2):
+        res = []
+        for i in range(len(l1)):
+            res.append(l1[i])
+            res.append(l2[i])
+            
+        return res    
+        
+    def draw_test_images_undistort(self):
+        if len(self.test_images)>0:
+            self.calibrateCamera(img_size = (self.test_images[0].shape[1], self.test_images[0].shape[0]) )
+
+            dst_images = self.undistort(self.test_images)
+
+            self._draw_images(images=self._combinelists(self.test_images, dst_images), titles=['Original Image', 'Undistorted Image']*len(dst_images))
+            
+            self.test_images = dst_images
+            
+    def mixed_threshold(self, img):
+        # Color threshold
+        img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)  
+        lower_yellow = np.array([20, 100, 100], dtype ='uint8')
+        upper_yellow = np.array([30, 255, 255], dtype ='uint8')
+        mask_yellow = cv2.inRange(img_hsv, lower_yellow, upper_yellow)
+
+        img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  
+        mask_white = cv2.inRange(img_gray, 200, 255)
+        
+        sbinary = cv2.bitwise_or(mask_white, mask_yellow)
+        
+        # Threshold x gradient
+        # Sobel x
+        sobelx = cv2.Sobel(img_gray, cv2.CV_64F, 1, 0) # Take the derivative in x
+        abs_sobelx = np.absolute(sobelx) # Absolute x derivative to accentuate lines away from horizontal
+        scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
+        
+        sxbinary = cv2.inRange(scaled_sobel, 20, 100)
+        
+        mixed =  cv2.bitwise_or(sbinary, sxbinary)
+        
+        return mixed, sbinary, sxbinary        
+
+    def draw_test_images_color_threshold(self):
+        if len(self.test_images)>0:
+            images = []
+            for img in self.test_images:
+                images.append(self.mixed_threshold(img)[1])
+                
+            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Color thresholds']*len(images))
+            
+    def draw_test_images_gradient_threshold(self):
+        if len(self.test_images)>0:
+            images = []
+            for img in self.test_images:
+                images.append(self.mixed_threshold(img)[2])
+                
+            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Gradient thresholds']*len(images))
+            
+            
+    def draw_test_images_mixed_threshold(self):
+        if len(self.test_images)>0:
+            images = []
+            for img in self.test_images:
+                _, sbinary, sxbinary = self.mixed_threshold(img)
+                images.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
+                
+            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Thresholded Binary']*len(images))        
+        
+        
+        
+        
+        
