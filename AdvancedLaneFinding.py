@@ -12,18 +12,25 @@ class AdvancedLaneFinding:
         self.findChessboardCorners()
         
         self.test_images = [mpimg.imread(img) for img in glob.glob(test_images)]
-        
-        self.apex_h = 0.04
-        self.apex_v = 0.59
+        imshape = self.test_images[0].shape
         
         # Define a four sided polygon to mask
-        self.imshape = self.test_images[0].shape
-            
-        imshape = self.imshape
+        self.apex_h = 0.04
+        self.apex_v = 0.59        
         self.mask_vertices = np.array([[(0,imshape[0]),
                               (imshape[1]/2-imshape[1]*self.apex_h/2, imshape[0]*self.apex_v),
                               (imshape[1]/2+imshape[1]*self.apex_h/2, imshape[0]*self.apex_v),
                               (imshape[1], imshape[0])]], dtype=np.int32)
+        
+        # Define four sided polygons for perspective transform
+        #self.src_poly = np.float32([[160,720],[590,450],[705,450],[1280,720]])
+        self.src_poly = np.float32([[0,720],[575,450],[705,450],[1280,720]])
+        self.dst_poly = np.float32([self.src_poly[0],[self.src_poly[0][0],0],[self.src_poly[3][0],0],self.src_poly[3]])
+        self.img_size = (imshape[1], imshape[0])
+        self.M = cv2.getPerspectiveTransform(self.src_poly, self.dst_poly)
+        
+        self.src_poly_int = np.int32(self.src_poly).reshape((-1,1,2))
+        self.dst_poly_int = np.int32(self.dst_poly).reshape((-1,1,2))
         
         
     # Camera calibration
@@ -172,7 +179,7 @@ class AdvancedLaneFinding:
                 images.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
                 
             self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Thresholded Binary']*len(images))        
-        self.test_images = images    
+        #self.test_images = images    
             
         
     def region_of_interest(self, img):
@@ -200,4 +207,28 @@ class AdvancedLaneFinding:
                 images.append(self.region_of_interest(img))
                 
             self._draw_images(images=self._combinelists(self.test_images, images), titles=['Input', 'Masked']*len(images))    
+    
+    def warpPerspective(self, img):
+        warped = cv2.warpPerspective(img, self.M, self.img_size)
+        return warped
+        
+    def draw_test_images_warped(self):
+        if len(self.test_images)>0:
+            src_images = []
+            dst_images = []
+            for img in self.test_images:
+                warped = self.warpPerspective(img)
+                cv2.polylines(warped, [self.dst_poly_int], True, (255,0,0), 5)
+                dst_images.append(warped)
+                
+                cv2.polylines(img, [self.src_poly_int], True, (255,0,0), 5)
+                src_images.append(img)
+                
+            self._draw_images(images=self._combinelists(src_images, dst_images), titles=['Input', 'Masked']*len(src_images))     
+        
+        
+        
+        
+        
+        
         
