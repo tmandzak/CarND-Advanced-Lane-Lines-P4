@@ -13,6 +13,18 @@ class AdvancedLaneFinding:
         
         self.test_images = [mpimg.imread(img) for img in glob.glob(test_images)]
         
+        self.apex_h = 0.04
+        self.apex_v = 0.59
+        
+        # Define a four sided polygon to mask
+        self.imshape = self.test_images[0].shape
+            
+        imshape = self.imshape
+        self.mask_vertices = np.array([[(0,imshape[0]),
+                              (imshape[1]/2-imshape[1]*self.apex_h/2, imshape[0]*self.apex_v),
+                              (imshape[1]/2+imshape[1]*self.apex_h/2, imshape[0]*self.apex_v),
+                              (imshape[1], imshape[0])]], dtype=np.int32)
+        
         
     # Camera calibration
     def findChessboardCorners(self):
@@ -160,8 +172,32 @@ class AdvancedLaneFinding:
                 images.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
                 
             self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Thresholded Binary']*len(images))        
+        self.test_images = images    
+            
         
+    def region_of_interest(self, img):
+        #defining a blank mask to start with
+        mask = np.zeros_like(img)   
+
+        #defining a 3 channel or 1 channel color to fill the mask with depending on the input image
+        if len(img.shape) > 2:
+            channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
+            ignore_mask_color = (255,) * channel_count
+        else:
+            ignore_mask_color = 255
+
+        #filling pixels inside the polygon defined by "vertices" with the fill color    
+        cv2.fillPoly(mask, self.mask_vertices, ignore_mask_color)
+
+        #returning the image only where mask pixels are nonzero
+        masked_image = cv2.bitwise_and(img, mask)
+        return masked_image
         
-        
-        
+    def draw_test_images_masked(self):
+        if len(self.test_images)>0:
+            images = []
+            for img in self.test_images:
+                images.append(self.region_of_interest(img))
+                
+            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Input', 'Masked']*len(images))    
         
