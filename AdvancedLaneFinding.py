@@ -12,6 +12,7 @@ class AdvancedLaneFinding:
         self.findChessboardCorners()
         
         self.test_images = [mpimg.imread(img) for img in glob.glob(test_images)]
+        #self.processed_images = [img.copy() for img in self.test_images]
         imshape = self.test_images[0].shape
         
         # Define a four sided polygon to mask
@@ -120,20 +121,20 @@ class AdvancedLaneFinding:
             
         return res    
         
-    def draw_test_images_undistort(self):
-        if len(self.test_images)>0:
-            self.calibrateCamera(img_size = (self.test_images[0].shape[1], self.test_images[0].shape[0]) )
-
-            dst_images = self.undistort(self.test_images)
-
-            self._draw_images(images=self._combinelists(self.test_images, dst_images), titles=['Original Image', 'Undistorted Image']*len(dst_images))
+    def draw_test_images_undistort(self, test_images = None):
+        if test_images == None:
+            test_images = self.test_images
             
-            self.test_images = dst_images
+        self.calibrateCamera(img_size = (test_images[0].shape[1], test_images[0].shape[0]) )
+        dst_images = self.undistort(test_images)
+        self._draw_images(images=self._combinelists(test_images, dst_images), titles=['Original Image', 'Undistorted Image']*len(dst_images))
+            
+        return dst_images
             
     def mixed_threshold(self, img):
         # Color threshold
         img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)  
-        lower_yellow = np.array([20, 100, 100], dtype ='uint8')
+        lower_yellow = np.array([10, 100, 100], dtype ='uint8')
         upper_yellow = np.array([30, 255, 255], dtype ='uint8')
         mask_yellow = cv2.inRange(img_hsv, lower_yellow, upper_yellow)
 
@@ -154,34 +155,43 @@ class AdvancedLaneFinding:
         
         return mixed, sbinary, sxbinary        
 
-    def draw_test_images_color_threshold(self):
-        if len(self.test_images)>0:
-            images = []
-            for img in self.test_images:
-                images.append(self.mixed_threshold(img)[1])
+    def draw_test_images_color_threshold(self, test_images = None):
+        if test_images == None:
+            test_images = self.test_images
+            
+        images = []
+        for img in test_images:
+            images.append(self.mixed_threshold(img)[1])
                 
-            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Color thresholds']*len(images))
+        self._draw_images(images=self._combinelists(test_images, images), titles=['Undistorted Image', 'Color thresholds']*len(images))
+        return images
             
-    def draw_test_images_gradient_threshold(self):
-        if len(self.test_images)>0:
-            images = []
-            for img in self.test_images:
-                images.append(self.mixed_threshold(img)[2])
+            
+    def draw_test_images_gradient_threshold(self, test_images = None):
+        if test_images == None:
+            test_images = self.test_images
+            
+        images = []
+        for img in test_images:
+            images.append(self.mixed_threshold(img)[2])
+
+        self._draw_images(images=self._combinelists(test_images, images), titles=['Undistorted Image', 'Gradient thresholds']*len(images))
+        return images
+            
+            
+    def draw_test_images_mixed_threshold(self, test_images = None):
+        if test_images == None:
+            test_images = self.test_images
+            
+        images = []
+        for img in test_images:
+            _, sbinary, sxbinary = self.mixed_threshold(img)
+            images.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
                 
-            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Gradient thresholds']*len(images))
+        self._draw_images(images=self._combinelists(test_images, images), titles=['Undistorted Image', 'Thresholded Binary']*len(images))        
+        return images    
             
-            
-    def draw_test_images_mixed_threshold(self):
-        if len(self.test_images)>0:
-            images = []
-            for img in self.test_images:
-                _, sbinary, sxbinary = self.mixed_threshold(img)
-                images.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
-                
-            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Undistorted Image', 'Thresholded Binary']*len(images))        
-        #self.test_images = images    
-            
-        
+       
     def region_of_interest(self, img):
         #defining a blank mask to start with
         mask = np.zeros_like(img)   
@@ -207,25 +217,34 @@ class AdvancedLaneFinding:
                 images.append(self.region_of_interest(img))
                 
             self._draw_images(images=self._combinelists(self.test_images, images), titles=['Input', 'Masked']*len(images))    
-    
+
     def warpPerspective(self, img):
         warped = cv2.warpPerspective(img, self.M, self.img_size)
         return warped
         
-    def draw_test_images_warped(self):
-        if len(self.test_images)>0:
-            src_images = []
-            dst_images = []
-            for img in self.test_images:
-                warped = self.warpPerspective(img)
-                cv2.polylines(warped, [self.dst_poly_int], True, (255,0,0), 5)
-                dst_images.append(warped)
-                
-                cv2.polylines(img, [self.src_poly_int], True, (255,0,0), 5)
-                src_images.append(img)
-                
-            self._draw_images(images=self._combinelists(src_images, dst_images), titles=['Input', 'Masked']*len(src_images))     
+    def draw_test_images_warped(self, test_images = None):
+        if test_images == None:
+            test_images = self.test_images
+            
+        src_images = []
+        dst_images = []
+        ret_images = []
         
+        for img in test_images:
+            src_img = img.copy()
+            cv2.polylines(src_img, [self.src_poly_int], True, (255,0,0), 5)
+            src_images.append(src_img)            
+            
+            warped = self.warpPerspective(img)
+            dst_img = warped.copy()
+            cv2.polylines(dst_img, [self.dst_poly_int], True, (255,0,0), 5)
+            dst_images.append(dst_img)
+
+            ret_images.append(warped)
+
+        self._draw_images(images=self._combinelists(src_images, dst_images), titles=['Input', 'Transformed']*len(src_images))     
+        
+        return ret_images
         
         
         
