@@ -183,13 +183,18 @@ class AdvancedLaneFinding:
         if test_images == None:
             test_images = self.test_images
             
-        images = []
+        images_color = []
+        images_binary = []
+        
         for img in test_images:
-            _, sbinary, sxbinary = self.mixed_threshold(img)
-            images.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
+            mixed, sbinary, sxbinary = self.mixed_threshold(img)
+            
+            images_binary.append( mixed )
+            images_color.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
+            
                 
-        self._draw_images(images=self._combinelists(test_images, images), titles=['Undistorted Image', 'Thresholded Binary']*len(images))        
-        return images    
+        self._draw_images(images=self._combinelists(test_images, images_color), titles=['Undistorted Image', 'Thresholded Binary']*len(images_color))        
+        return images_binary, images_color   
             
        
     def region_of_interest(self, img):
