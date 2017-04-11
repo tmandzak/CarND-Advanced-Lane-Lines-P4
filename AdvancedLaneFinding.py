@@ -65,7 +65,7 @@ class AdvancedLaneFinding:
             else:
                 self.corners_images_failed.append(img)
                 
-    def _draw_images(self, images, titles=[], n=None, cols=2, show_axis='on'):
+    def _draw_images(self, images, titles=[], n=None, cols=2, show_axis='on', cmap=None):
         if len(images)>0:
             if n or n==0:
                 _ = plt.imshow(images[n])
@@ -81,7 +81,7 @@ class AdvancedLaneFinding:
                     a.axis(show_axis)
                     if len(titles)==len(images):
                         a.set_title(titles[i], fontsize=20)
-                    a.imshow(image)
+                    a.imshow(image, cmap)
                     i+=1
  
     def draw_corners_images(self, n=None):
