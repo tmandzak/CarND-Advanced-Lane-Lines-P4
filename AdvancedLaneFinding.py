@@ -21,8 +21,11 @@ class AdvancedLaneFinding:
         
         # Define four sided polygons for perspective transform
         #self.src_poly = np.float32([[160,720],[590,450],[705,450],[1280,720]])
-        self.src_poly = np.float32([[0,720],[575,450],[705,450],[1280,720]])
-        self.dst_poly = np.float32([self.src_poly[0],[self.src_poly[0][0],0],[self.src_poly[3][0],0],self.src_poly[3]])
+        #self.src_poly = np.float32([[0,720],[575,450],[705,450],[1280,720]])
+        #self.dst_poly = np.float32([self.src_poly[0],[self.src_poly[0][0],0],[self.src_poly[3][0],0],self.src_poly[3]])
+        #self.src_poly = np.float32([[191,719],[605,442],[674,442],[1118,719]])
+        self.src_poly = np.float32([[191,719],[587,454],[693,454],[1118,719]])
+        self.dst_poly = np.float32([[300,719],[300,0],[1000,0],[1000,719]])
         
         self.M = cv2.getPerspectiveTransform(self.src_poly, self.dst_poly)
         self.Minv = cv2.getPerspectiveTransform(self.dst_poly, self.src_poly)
@@ -149,32 +152,32 @@ class AdvancedLaneFinding:
         
         return mixed, sbinary, sxbinary        
 
-    def draw_test_images_color_threshold(self, test_images = None):
-        if test_images == None:
+    def draw_test_images_color_threshold(self, test_images = []):
+        if test_images == []:
             test_images = self.test_images
             
         images = []
         for img in test_images:
             images.append(self.mixed_threshold(img)[1])
                 
-        self._draw_images(images=self._combinelists(test_images, images), titles=['Undistorted Image', 'Color thresholds']*len(images))
+        self._draw_images(images=self._combinelists(test_images, images), titles=['Input', 'Color thresholds']*len(images), cmap='Greys_r')
         return images
             
             
-    def draw_test_images_gradient_threshold(self, test_images = None):
-        if test_images == None:
+    def draw_test_images_gradient_threshold(self, test_images = []):
+        if test_images == []:
             test_images = self.test_images
             
         images = []
         for img in test_images:
             images.append(self.mixed_threshold(img)[2])
 
-        self._draw_images(images=self._combinelists(test_images, images), titles=['Undistorted Image', 'Gradient thresholds']*len(images))
+        self._draw_images(images=self._combinelists(test_images, images), titles=['Input', 'Gradient thresholds']*len(images), cmap='Greys_r')
         return images
             
             
-    def draw_test_images_mixed_threshold(self, test_images = None):
-        if test_images == None:
+    def draw_test_images_mixed_threshold(self, test_images = []):
+        if test_images == []:
             test_images = self.test_images
             
         images_color = []
@@ -187,7 +190,7 @@ class AdvancedLaneFinding:
             images_color.append( np.dstack(( np.zeros_like(sxbinary), sxbinary, sbinary)) )
             
                 
-        self._draw_images(images=self._combinelists(test_images, images_color), titles=['Undistorted Image', 'Thresholded Binary']*len(images_color))        
+        self._draw_images(images=self._combinelists(test_images, images_color), titles=['Input', 'Thresholded Binary']*len(images_color))        
         return images_binary, images_color   
             
 
@@ -195,13 +198,14 @@ class AdvancedLaneFinding:
         warped = cv2.warpPerspective(img, self.M, self.img_size)
         return warped
         
-    def draw_test_images_warped(self, test_images = None):
-        if test_images == None:
+    def draw_test_images_warped(self, test_images = []):
+        if test_images == []:
             test_images = self.test_images
             
         src_images = []
         dst_images = []
-        ret_images = []
+        images_binary = []
+        images_color = []
         
         for img in test_images:
             src_img = img.copy()
@@ -213,11 +217,16 @@ class AdvancedLaneFinding:
             cv2.polylines(dst_img, [self.dst_poly_int], True, (255,0,0), 5)
             dst_images.append(dst_img)
 
-            ret_images.append(warped)
+            images_color.append(warped)
+            
+            warped_gray = cv2.cvtColor(warped, cv2.COLOR_RGB2GRAY)  
+            warped_binary = cv2.inRange(warped_gray, 1, 255)
+            
+            images_binary.append(warped_binary)
 
         self._draw_images(images=self._combinelists(src_images, dst_images), titles=['Input', 'Transformed']*len(src_images))     
         
-        return ret_images
+        return images_binary, images_color
 
     def locateLaneLines(self, binary_warped):
         left_fit = self.left_fit
@@ -383,7 +392,7 @@ class AdvancedLaneFinding:
         return images
     
 
-    def draw_color_area_located(self, color_undist, binary_warped, left_fit, right_fit):
+    def draw_color_area_located(self, color_undist, binary_warped, left_fit, right_fit, left_curverad, right_curverad):
         # Generate x and y values for plotting
         ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
         left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
@@ -406,6 +415,8 @@ class AdvancedLaneFinding:
         
         # Combine the result with the original image
         image = cv2.addWeighted(color_undist, 1, newwarp, 0.3, 0)
+        text = 'L: '+str(int(left_curverad))+'m  R: '+str(int(right_curverad))+'m'
+        cv2.putText(image, text, (100,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
         
         return image     
     
@@ -417,10 +428,10 @@ class AdvancedLaneFinding:
         for t_img, b_img in zip(self.test_images, binary_images):
             left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(b_img)
             
-            result = self.draw_color_area_located(t_img, b_img, left_fit, right_fit)
+            result = self.draw_color_area_located(t_img, b_img, left_fit, right_fit, left_curverad, right_curverad)
             
             images.append(result)
-            titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
+            #titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
             
         self._draw_images(images=images, titles=titles)
 
@@ -428,10 +439,10 @@ class AdvancedLaneFinding:
     
     def pipeline(self, img):
         img = self.undistort(img)
-        img_out = self.warpPerspective(img)
-        img_out = self.mixed_threshold(img_out)[0]
+        img_out = self.mixed_threshold(img)[0]
+        img_out = self.warpPerspective(img_out)
         left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(img_out)
-        result = self.draw_color_area_located(img, img_out, left_fit, right_fit)
+        result = self.draw_color_area_located(img, img_out, left_fit, right_fit, left_curverad, right_curverad)
         return result
     
     def draw_test_images_pipeline(self):
