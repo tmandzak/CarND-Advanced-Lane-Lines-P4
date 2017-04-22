@@ -5,7 +5,7 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
 class AdvancedLaneFinding:
-    def __init__(self, cal_images, cal_nx, cal_ny, test_images, usePreviousBinary):
+    def __init__(self, cal_images, cal_nx, cal_ny, test_images, usePreviousBinary, ym_per_pix, xm_per_pix):
         self.cal_images = [mpimg.imread(img) for img in glob.glob(cal_images)] 
         self.cal_nx = cal_nx
         self.cal_ny = cal_ny
@@ -36,6 +36,10 @@ class AdvancedLaneFinding:
         self.usePreviousBinary = usePreviousBinary
         self.left_fit = []
         self.right_fit = []
+        
+        # Define conversions in x and y from pixels space to meters
+        self.ym_per_pix = ym_per_pix # meters per pixel in y dimension
+        self.xm_per_pix = xm_per_pix # meters per pixel in x dimension
         
         
     # Camera calibration
@@ -352,7 +356,17 @@ class AdvancedLaneFinding:
         self.left_fit = left_fit
         self.right_fit = right_fit
         
-         #---------------------------- Plotting ---------------------------------------
+        #---------------------------- Curvature --------------------------------------
+        # Fit new polynomials to x,y in world space
+        left_fit_cr = np.polyfit(lefty*self.ym_per_pix, leftx*self.xm_per_pix, 2)
+        right_fit_cr = np.polyfit(righty*self.ym_per_pix, rightx*self.xm_per_pix, 2)
+        # Calculate the new radii of curvature
+        y_eval = (binary_warped.shape[0]-1)*self.ym_per_pix
+                
+        left_curverad = ((1 + (2*left_fit_cr[0]*y_eval + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+        right_curverad = ((1 + (2*right_fit_cr[0]*y_eval + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+        
+        #---------------------------- Plotting ---------------------------------------
         
         
         # Generate x and y values for plotting
@@ -397,12 +411,21 @@ class AdvancedLaneFinding:
         #plt.xlim(0, 1280)
         #plt.ylim(720, 0)    
 
-        return result
+        return result, left_curverad, right_curverad
     
     def draw_binary_images_lanes_located(self, binary_images):
         images = []
+        titles = []
+        
+        save = self.usePreviousBinary
+        self.usePreviousBinary = False
+        
         for img in binary_images:
-            images.append(self.locateLaneLines(img))
+            res, leftr, rightr = self.locateLaneLines(img)
+            images.append(res)
+            titles.append("Curves radiuses: "+str(int(leftr))+"  "+str(int(rightr)))
+            
+        self.usePreviousBinary = save    
 
-        self._draw_images(images=images, titles=[])
+        self._draw_images(images=images, titles=titles)
         return images
