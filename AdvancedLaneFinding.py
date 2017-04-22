@@ -6,20 +6,24 @@ import matplotlib.pyplot as plt
 
 class AdvancedLaneFinding:
     def __init__(self, cal_images, cal_nx, cal_ny, test_images, usePreviousBinary, ym_per_pix, xm_per_pix):
+        
+        # Calibration
         self.cal_images = [mpimg.imread(img) for img in glob.glob(cal_images)] 
         self.cal_nx = cal_nx
         self.cal_ny = cal_ny
         self.findChessboardCorners()
         
         self.test_images = [mpimg.imread(img) for img in glob.glob(test_images)]
-        #self.processed_images = [img.copy() for img in self.test_images]
-        imshape = (720, 1280)
+        self.img_size = (self.test_images[0].shape[1], self.test_images[0].shape[0])
+        
+        # Do camera calibration given object points and image points
+        ret, self.mtx, self.dist, rvecs, tvecs = cv2.calibrateCamera(self.objpoints, self.imgpoints, self.img_size, None, None)
         
         # Define four sided polygons for perspective transform
         #self.src_poly = np.float32([[160,720],[590,450],[705,450],[1280,720]])
         self.src_poly = np.float32([[0,720],[575,450],[705,450],[1280,720]])
         self.dst_poly = np.float32([self.src_poly[0],[self.src_poly[0][0],0],[self.src_poly[3][0],0],self.src_poly[3]])
-        self.img_size = (imshape[1], imshape[0])
+        
         self.M = cv2.getPerspectiveTransform(self.src_poly, self.dst_poly)
         self.Minv = cv2.getPerspectiveTransform(self.dst_poly, self.src_poly)
         
@@ -91,25 +95,18 @@ class AdvancedLaneFinding:
     def draw_corners_images_failed(self, n=None):
         self._draw_images(self.corners_images_failed, n=n)        
         
-    # Do camera calibration given object points and image points    
-    def calibrateCamera(self, img_size):
-        ret, self.mtx, self.dist, rvecs, tvecs = cv2.calibrateCamera(self.objpoints, self.imgpoints, img_size, None, None)
+       
+    def pipeline(self, img):
+        img = self.undistort(img)
         
-    def undistort(self, img_input):
-        if type(img_input) == list:
-            img_otput = []
-            for img in img_input:
-                img_otput.append(cv2.undistort(img, self.mtx, self.dist, None, self.mtx))
-        else:
-            img_otput = cv2.undistort(img_input, self.mtx, self.dist, None, self.mtx)
-                
-        return img_otput
+        
+    def undistort(self, img):
+        return cv2.undistort(img, self.mtx, self.dist, None, self.mtx)
     
     # Test undistortion on an image
     def draw_test_undistort(self, test_image):
         img = cv2.imread(test_image)
-        img_size = (img.shape[1], img.shape[0])
-        self.calibrateCamera(img_size)
+
         dst = self.undistort(img)
         # Visualize undistortion
         self._draw_images(images=[img, dst], titles=['Original Image', 'Undistorted Image'])
@@ -122,12 +119,13 @@ class AdvancedLaneFinding:
             
         return res    
         
-    def draw_test_images_undistort(self, test_images = None):
-        if test_images == None:
-            test_images = self.test_images
-            
-        self.calibrateCamera(img_size = (test_images[0].shape[1], test_images[0].shape[0]) )
-        dst_images = self.undistort(test_images)
+    def draw_test_images_undistort(self):
+        test_images = self.test_images
+
+        dst_images = []
+        for img in test_images:
+            dst_images.append(self.undistort(img))
+        
         self._draw_images(images=self._combinelists(test_images, dst_images), titles=['Original Image', 'Undistorted Image']*len(dst_images))
             
         return dst_images
