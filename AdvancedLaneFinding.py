@@ -15,14 +15,6 @@ class AdvancedLaneFinding:
         #self.processed_images = [img.copy() for img in self.test_images]
         imshape = (720, 1280)
         
-        # Define a four sided polygon to mask
-        self.apex_h = 0.04
-        self.apex_v = 0.59        
-        self.mask_vertices = np.array([[(0,imshape[0]),
-                              (imshape[1]/2-imshape[1]*self.apex_h/2, imshape[0]*self.apex_v),
-                              (imshape[1]/2+imshape[1]*self.apex_h/2, imshape[0]*self.apex_v),
-                              (imshape[1], imshape[0])]], dtype=np.int32)
-        
         # Define four sided polygons for perspective transform
         #self.src_poly = np.float32([[160,720],[590,450],[705,450],[1280,720]])
         self.src_poly = np.float32([[0,720],[575,450],[705,450],[1280,720]])
@@ -205,32 +197,6 @@ class AdvancedLaneFinding:
         self._draw_images(images=self._combinelists(test_images, images_color), titles=['Undistorted Image', 'Thresholded Binary']*len(images_color))        
         return images_binary, images_color   
             
-       
-    def region_of_interest(self, img):
-        #defining a blank mask to start with
-        mask = np.zeros_like(img)   
-
-        #defining a 3 channel or 1 channel color to fill the mask with depending on the input image
-        if len(img.shape) > 2:
-            channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
-            ignore_mask_color = (255,) * channel_count
-        else:
-            ignore_mask_color = 255
-
-        #filling pixels inside the polygon defined by "vertices" with the fill color    
-        cv2.fillPoly(mask, self.mask_vertices, ignore_mask_color)
-
-        #returning the image only where mask pixels are nonzero
-        masked_image = cv2.bitwise_and(img, mask)
-        return masked_image
-        
-    def draw_test_images_masked(self):
-        if len(self.test_images)>0:
-            images = []
-            for img in self.test_images:
-                images.append(self.region_of_interest(img))
-                
-            self._draw_images(images=self._combinelists(self.test_images, images), titles=['Input', 'Masked']*len(images))    
 
     def warpPerspective(self, img):
         warped = cv2.warpPerspective(img, self.M, self.img_size)
@@ -408,29 +374,6 @@ class AdvancedLaneFinding:
     
         return image
 
-    def _draw_color_area_located(self, binary_warped, left_fit, right_fit):
-        # Generate x and y values for plotting
-        ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
-        left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-        right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2] 
-        
-        # Create an image to draw the lines on
-        warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
-        color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-
-        # Recast the x and y points into usable format for cv2.fillPoly()
-        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
-        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
-        pts = np.hstack((pts_left, pts_right))
-
-        # Draw the lane onto the warped blank image
-        cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
-
-        # Warp the blank back to original image space using inverse perspective matrix (Minv)
-        image = cv2.warpPerspective(color_warp, self.Minv, (binary_warped.shape[1], binary_warped.shape[0]))        
-        return image    
-        
-    
     def draw_binary_images_lanes_located(self, binary_images):
         images = []
         titles = []
@@ -451,6 +394,34 @@ class AdvancedLaneFinding:
         self._draw_images(images=images, titles=titles)
         return images
     
+
+    def draw_color_area_located(self, color_undist, binary_warped, left_fit, right_fit):
+        # Generate x and y values for plotting
+        ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
+        left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
+        right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2] 
+        
+        # Create an image to draw the lines on
+        warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
+        color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+        # Recast the x and y points into usable format for cv2.fillPoly()
+        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+        pts = np.hstack((pts_left, pts_right))
+
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+        # Warp the blank back to original image space using inverse perspective matrix (Minv)
+        newwarp = cv2.warpPerspective(color_warp, self.Minv, (binary_warped.shape[1], binary_warped.shape[0])) 
+        
+        # Combine the result with the original image
+        image = cv2.addWeighted(color_undist, 1, newwarp, 0.3, 0)
+        
+        return image     
+    
+    
     def draw_test_images_area_located(self, binary_images):
         images = []
         titles = []
@@ -458,10 +429,10 @@ class AdvancedLaneFinding:
         save = self.usePreviousBinary
         self.usePreviousBinary = False
         
-        for img in binary_images:
-            left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(img)
+        for t_img, b_img in zip(self.test_images, binary_images):
+            left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(b_img)
             
-            result = self._draw_color_area_located(img, left_fit, right_fit)
+            result = self.draw_color_area_located(t_img, b_img, left_fit, right_fit)
             
             images.append(result)
             titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
@@ -469,6 +440,7 @@ class AdvancedLaneFinding:
         self.usePreviousBinary = save    
 
         self._draw_images(images=images, titles=titles)
+
         return images    
     
     
