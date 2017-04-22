@@ -5,7 +5,7 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
 class AdvancedLaneFinding:
-    def __init__(self, cal_images, cal_nx, cal_ny, test_images, usePreviousBinary, ym_per_pix, xm_per_pix):
+    def __init__(self, cal_images, cal_nx, cal_ny, test_images, usePreviousFrame, ym_per_pix, xm_per_pix):
         
         # Calibration
         self.cal_images = [mpimg.imread(img) for img in glob.glob(cal_images)] 
@@ -30,7 +30,7 @@ class AdvancedLaneFinding:
         self.src_poly_int = np.int32(self.src_poly).reshape((-1,1,2))
         self.dst_poly_int = np.int32(self.dst_poly).reshape((-1,1,2))
         
-        self.usePreviousBinary = usePreviousBinary
+        self.usePreviousFrame = usePreviousFrame
         self.left_fit = []
         self.right_fit = []
         
@@ -94,11 +94,6 @@ class AdvancedLaneFinding:
         
     def draw_corners_images_failed(self, n=None):
         self._draw_images(self.corners_images_failed, n=n)        
-        
-       
-    def pipeline(self, img):
-        img = self.undistort(img)
-        
         
     def undistort(self, img):
         return cv2.undistort(img, self.mtx, self.dist, None, self.mtx)
@@ -224,11 +219,11 @@ class AdvancedLaneFinding:
         
         return ret_images
 
-    def locateLaneLines(self, binary_warped, perspective = True):
+    def locateLaneLines(self, binary_warped):
         left_fit = self.left_fit
         right_fit = self.right_fit
         
-        if (self.usePreviousBinary == False) | (left_fit == []) | (right_fit == []):
+        if (self.usePreviousFrame == False) | (left_fit == []) | (right_fit == []):
             binary_warped = binary_warped // 255
             # Assuming you have created a warped binary image called "binary_warped"
             # Take a histogram of the bottom half of the image
@@ -334,7 +329,7 @@ class AdvancedLaneFinding:
         return left_curverad, right_curverad, left_fit, right_fit, leftx, lefty, rightx, righty
 
 
-    def _draw_binary_lanes_located(self, binary_warped, left_fit, right_fit, leftx, lefty, rightx, righty):
+    def _draw_binary_image_lanes_located(self, binary_warped, left_fit, right_fit, leftx, lefty, rightx, righty):
         # Generate x and y values for plotting
         ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
         left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
@@ -376,18 +371,13 @@ class AdvancedLaneFinding:
         images = []
         titles = []
         
-        save = self.usePreviousBinary
-        self.usePreviousBinary = False
-        
         for img in binary_images:
             left_curverad, right_curverad, left_fit, right_fit, leftx, lefty, rightx, righty = self.locateLaneLines(img)
             
-            result = self._draw_binary_lanes_located(img, left_fit, right_fit, leftx, lefty, rightx, righty)
+            result = self._draw_binary_image_lanes_located(img, left_fit, right_fit, leftx, lefty, rightx, righty)
             
             images.append(result)
             titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
-            
-        self.usePreviousBinary = save    
 
         self._draw_images(images=images, titles=titles)
         return images
@@ -424,9 +414,6 @@ class AdvancedLaneFinding:
         images = []
         titles = []
         
-        save = self.usePreviousBinary
-        self.usePreviousBinary = False
-        
         for t_img, b_img in zip(self.test_images, binary_images):
             left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(b_img)
             
@@ -435,15 +422,26 @@ class AdvancedLaneFinding:
             images.append(result)
             titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
             
-        self.usePreviousBinary = save    
-
         self._draw_images(images=images, titles=titles)
 
         return images    
     
+    def pipeline(self, img):
+        img = self.undistort(img)
+        img_out = self.warpPerspective(img)
+        img_out = self.mixed_threshold(img_out)[0]
+        left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(img_out)
+        result = self.draw_color_area_located(img, img_out, left_fit, right_fit)
+        return result
     
-    
-    
+    def draw_test_images_pipeline(self):
+        images_processed = []
+        
+        for img in self.test_images:
+            images_processed.append( self.pipeline(img) )
+                
+        self._draw_images(images=self._combinelists(self.test_images, images_processed), titles=['Input', 'Processed']*len(self.test_images))        
+        
     
     
     
