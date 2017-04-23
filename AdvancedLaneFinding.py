@@ -20,10 +20,6 @@ class AdvancedLaneFinding:
         ret, self.mtx, self.dist, rvecs, tvecs = cv2.calibrateCamera(self.objpoints, self.imgpoints, self.img_size, None, None)
         
         # Define four sided polygons for perspective transform
-        #self.src_poly = np.float32([[160,720],[590,450],[705,450],[1280,720]])
-        #self.src_poly = np.float32([[0,720],[575,450],[705,450],[1280,720]])
-        #self.dst_poly = np.float32([self.src_poly[0],[self.src_poly[0][0],0],[self.src_poly[3][0],0],self.src_poly[3]])
-        #self.src_poly = np.float32([[191,719],[605,442],[674,442],[1118,719]])
         self.src_poly = np.float32([[191,719],[587,454],[693,454],[1118,719]])
         self.dst_poly = np.float32([[300,719],[300,0],[1000,0],[1000,719]])
         
@@ -73,7 +69,7 @@ class AdvancedLaneFinding:
             else:
                 self.corners_images_failed.append(img)
                 
-    def _draw_images(self, images, titles=[], n=None, cols=2, show_axis='on', cmap=None):
+    def _draw_images(self, images, titles=[], n=None, cols=2, show_axis='on', cmap='Greys_r'):
         if len(images)>0:
             if n or n==0:
                 _ = plt.imshow(images[n])
@@ -145,7 +141,6 @@ class AdvancedLaneFinding:
         sobelx = cv2.Sobel(img_gray, cv2.CV_64F, 1, 0) # Take the derivative in x
         abs_sobelx = np.absolute(sobelx) # Absolute x derivative to accentuate lines away from horizontal
         scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
-        
         sxbinary = cv2.inRange(scaled_sobel, 20, 100)
         
         mixed =  cv2.bitwise_or(sbinary, sxbinary)
@@ -209,20 +204,24 @@ class AdvancedLaneFinding:
         
         for img in test_images:
             src_img = img.copy()
+            if len(src_img.shape)<3:
+                src_img = np.dstack((src_img, src_img, src_img))
             cv2.polylines(src_img, [self.src_poly_int], True, (255,0,0), 5)
             src_images.append(src_img)            
             
             warped = self.warpPerspective(img)
+            
             dst_img = warped.copy()
+            if len(dst_img.shape)<3:
+                dst_img = np.dstack((dst_img, dst_img, dst_img))
+            images_color.append(dst_img.copy())    
             cv2.polylines(dst_img, [self.dst_poly_int], True, (255,0,0), 5)
             dst_images.append(dst_img)
-
-            images_color.append(warped)
             
-            warped_gray = cv2.cvtColor(warped, cv2.COLOR_RGB2GRAY)  
-            warped_binary = cv2.inRange(warped_gray, 1, 255)
-            
-            images_binary.append(warped_binary)
+            if len(warped.shape)>2:
+                images_binary.append(cv2.inRange(cv2.bitwise_or(warped[:,:,1], warped[:,:,2]), 1, 255))
+            else:
+                images_binary.append(cv2.inRange(warped, 1 , 255))
 
         self._draw_images(images=self._combinelists(src_images, dst_images), titles=['Input', 'Transformed']*len(src_images))     
         
@@ -322,20 +321,31 @@ class AdvancedLaneFinding:
             left_fit = np.polyfit(lefty, leftx, 2)
             right_fit = np.polyfit(righty, rightx, 2)
             
+        
+        center_fit = (left_fit + right_fit)/2
+        
         self.left_fit = left_fit
         self.right_fit = right_fit
+        
+        #----------------------------- Offset -----------------------------------------
+        x_left = left_fit[0]*719**2 + left_fit[1]*719 + left_fit[2]
+        x_right = right_fit[0]*719**2 + right_fit[1]*719 + right_fit[2]
+        offset = (640 - int((x_left + x_right)/2) ) * self.xm_per_pix
         
         #---------------------------- Curvature --------------------------------------
         # Fit new polynomials to x,y in world space
         left_fit_cr = np.polyfit(lefty*self.ym_per_pix, leftx*self.xm_per_pix, 2)
         right_fit_cr = np.polyfit(righty*self.ym_per_pix, rightx*self.xm_per_pix, 2)
+        center_fit_cr = (left_fit_cr + right_fit_cr)/2
+        
         # Calculate the new radii of curvature
         y_eval = (binary_warped.shape[0]-1)*self.ym_per_pix
                 
         left_curverad = ((1 + (2*left_fit_cr[0]*y_eval + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
         right_curverad = ((1 + (2*right_fit_cr[0]*y_eval + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+        center_curverad = ((1 + (2*center_fit_cr[0]*y_eval + center_fit_cr[1])**2)**1.5) / np.absolute(2*center_fit_cr[0])
 
-        return left_curverad, right_curverad, left_fit, right_fit, leftx, lefty, rightx, righty
+        return left_curverad, right_curverad, center_curverad, offset, left_fit, right_fit, leftx, lefty, rightx, righty
 
 
     def _draw_binary_image_lanes_located(self, binary_warped, left_fit, right_fit, leftx, lefty, rightx, righty):
@@ -343,6 +353,8 @@ class AdvancedLaneFinding:
         ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
         left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
         right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+        #center_fitx = center_fit[0]*ploty**2 + center_fit[1]*ploty + center_fit[2]
+        #center_fitx = (left_fitx + right_fitx)//2
         
         # Create an image to draw on and an image to show the selection window
         out_img = np.dstack((binary_warped, binary_warped, binary_warped))
@@ -373,7 +385,11 @@ class AdvancedLaneFinding:
         pts = np.int32(np.round(list(zip(right_fitx, ploty))))
         pts = pts.reshape((-1,1,2))
         cv2.polylines(img=image, pts=[pts],isClosed=False,color=(255,255,0), lineType=8, thickness = 3)  
-    
+
+        #pts = np.int32(np.round(list(zip(center_fitx, ploty))))
+        #pts = pts.reshape((-1,1,2))
+        #cv2.polylines(img=image, pts=[pts],isClosed=False,color=(255,255,0), lineType=8, thickness = 3)  
+        
         return image
 
     def draw_binary_images_lanes_located(self, binary_images):
@@ -381,18 +397,19 @@ class AdvancedLaneFinding:
         titles = []
         
         for img in binary_images:
-            left_curverad, right_curverad, left_fit, right_fit, leftx, lefty, rightx, righty = self.locateLaneLines(img)
+            left_curverad, right_curverad, center_curverad, offset, left_fit, right_fit, leftx, lefty, rightx, righty = self.locateLaneLines(img)
             
             result = self._draw_binary_image_lanes_located(img, left_fit, right_fit, leftx, lefty, rightx, righty)
             
             images.append(result)
-            titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
+            #titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
+            titles.append("Lane curvature: "+str(int(center_curverad))+"  Offset: "+'{:3.2f}'.format(offset))
 
         self._draw_images(images=images, titles=titles)
         return images
     
 
-    def draw_color_area_located(self, color_undist, binary_warped, left_fit, right_fit, left_curverad, right_curverad):
+    def draw_color_area_located(self, color_undist, binary_warped, left_fit, right_fit, left_curverad, right_curverad, center_curverad, offset):
         # Generate x and y values for plotting
         ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
         left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
@@ -415,8 +432,12 @@ class AdvancedLaneFinding:
         
         # Combine the result with the original image
         image = cv2.addWeighted(color_undist, 1, newwarp, 0.3, 0)
-        text = 'L: '+str(int(left_curverad))+'m  R: '+str(int(right_curverad))+'m'
-        cv2.putText(image, text, (100,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
+        #text = 'L: '+str(int(left_curverad))+'m  R: '+str(int(right_curverad))+'m'
+        text1 = "Lane curvature: "+str(int(center_curverad))+" m"  
+        text2 = "Offset: "+'{:3.2f}'.format(abs(offset))+" m "+ ('left' if offset < 0 else 'right') + " of center"
+        
+        cv2.putText(image, text1, (100,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 3)
+        cv2.putText(image, text2, (100,150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 3)
         
         return image     
     
@@ -426,12 +447,11 @@ class AdvancedLaneFinding:
         titles = []
         
         for t_img, b_img in zip(self.test_images, binary_images):
-            left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(b_img)
+            left_curverad, right_curverad, center_curverad, offset, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(b_img)
             
-            result = self.draw_color_area_located(t_img, b_img, left_fit, right_fit, left_curverad, right_curverad)
+            result = self.draw_color_area_located(t_img, b_img, left_fit, right_fit, left_curverad, right_curverad, center_curverad, offset)
             
             images.append(result)
-            #titles.append("Curves radiuses: "+str(int(left_curverad))+"  "+str(int(right_curverad)))
             
         self._draw_images(images=images, titles=titles)
 
@@ -440,9 +460,9 @@ class AdvancedLaneFinding:
     def pipeline(self, img):
         img = self.undistort(img)
         img_out = self.mixed_threshold(img)[0]
-        img_out = self.warpPerspective(img_out)
-        left_curverad, right_curverad, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(img_out)
-        result = self.draw_color_area_located(img, img_out, left_fit, right_fit, left_curverad, right_curverad)
+        img_out = cv2.inRange(self.warpPerspective(img_out), 1, 255)
+        left_curverad, right_curverad, center_curverad, offset, left_fit, right_fit, _, _, _, _ = self.locateLaneLines(img_out)
+        result = self.draw_color_area_located(img, img_out, left_fit, right_fit, left_curverad, right_curverad, center_curverad, offset)
         return result
     
     def draw_test_images_pipeline(self):
