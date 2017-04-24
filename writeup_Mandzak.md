@@ -13,13 +13,13 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./output_images/chessboard_undistorted.png ""
-[image2]: ./output_images/test_images_undistorted.jpg ""
-[image3]: ./output_images/test_images_thresholded.jpg ""
-[image4]: ./output_images/test_images_perspective.jpg ""
-[image5]: ./output_images/test_images_thresholded_perspective.jpg ""
-[image6]: ./output_images/test_images_lanes_located.jpg ""
-[image7]: ./output_images/test_images_final.jpg ""
+[image1]: ./output_images/chessboard_undistorted.png "Undistorted Chessboard"
+[image2]: ./output_images/test_images_undistorted.png "Undistorted Test Images"
+[image3]: ./output_images/test_images_thresholded.png "Thresholded test Images"
+[image4]: ./output_images/test_images_perspective.png ""
+[image5]: ./output_images/test_images_thresholded_perspective.png ""
+[image6]: ./output_images/test_images_lanes_located.png ""
+[image7]: ./output_images/test_images_final.png ""
 [video1]: ./project_video_output.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
