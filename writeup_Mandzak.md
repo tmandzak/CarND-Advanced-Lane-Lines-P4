@@ -80,13 +80,12 @@ To present results of lane lines detection following images where generated in *
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I did this in **lines 333-348** of `locateLaneLines` method as described in a previous section.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
-
-
+I implemented this step in the **cell 14** by calling `draw_test_images_pipeline` method (**lines 477-483**) based on a key `pipeline` method (**lines 469-475**) used also for processing frames during final video generation.
+Here are examples of my result on test images:
 
 ![alt text][image7]
 
