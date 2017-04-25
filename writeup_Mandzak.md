@@ -23,14 +23,17 @@ The goals / steps of this project are the following:
 [video1]: ./project_video_output.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
-###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
 ---
 ### Writeup / README
 
 #### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
 
-You're reading it!
+You're reading it! The whole solution is implemented as a class called AdvancedLaneFinding defined in AdvancedLaneFinding.py.
+The class is instanciated in P4_Mandzak.ipynb in order to run and test the pipeline step by step and generate illustrations.
+Full run of P4_Mandzak.ipynb will produce all images needed for this writeup as well as a final video.
+
 ### Camera Calibration
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
