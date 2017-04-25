@@ -16,10 +16,10 @@ The goals / steps of this project are the following:
 [image1]: ./output_images/chessboard_undistorted.png "Undistorted Chessboard"
 [image2]: ./output_images/test_images_undistorted.png "Undistorted Test Images"
 [image3]: ./output_images/test_images_thresholded.png "Thresholded test Images"
-[image4]: ./output_images/test_images_perspective.png ""
-[image5]: ./output_images/test_images_thresholded_perspective.png ""
-[image6]: ./output_images/test_images_lanes_located.png ""
-[image7]: ./output_images/test_images_final.png ""
+[image4]: ./output_images/test_images_perspective.png "Perspective transform on test images"
+[image5]: ./output_images/test_images_thresholded_perspective.png "Perspective transform on thresholded images"
+[image6]: ./output_images/test_images_lanes_located.png "Locating Lane Lines"
+[image7]: ./output_images/test_images_final.png "Full pipeline applied to test images"
 [video1]: ./project_video_output.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -65,9 +65,11 @@ The code for my perspective transform includes a method called `warpPerspective`
 | 693, 454      | 1000, 0       |
 | 1118, 719     | 1000, 719     |
 
-I verified that my perspective transform was working as expected by drawing the `self.src_poly` and `self.dst_poly` points onto a test image and its warped counterpart (**cells 9**, `draw_test_images_warped` method defined in **lines 198-230**) to verify that the lines appear parallel in the warped image.
+I verified that my perspective transform was working as expected by drawing the `self.src_poly` and `self.dst_poly` points onto a test image and its warped counterpart (**cells 9-10**, `draw_test_images_warped` method defined in **lines 198-230**) to verify that the lines appear parallel in the warped image.
 
 ![alt text][image4]
+
+![alt text][image5]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
