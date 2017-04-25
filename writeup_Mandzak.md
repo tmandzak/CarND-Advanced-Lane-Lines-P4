@@ -38,26 +38,19 @@ Full run of `P4_Mandzak.ipynb` will produce all [images](https://github.com/tman
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in lines # through # of the file called `some_file.py`).  
+The code for this step is contained in the constructor of `AdvancedLaneFinding` class in **lines 10-22** of the file called `AdvancedLaneFinding.py`. First three parameters of the constructor serve as input for calibration: `cal_images = 'camera_cal/calibration*.jpg'` defines a set of calibration images, `cal_nx = 9, cal_ny = 6` defines size of the chess board (see **cell 3** of the IPython notebook). **Line 14** loads `self.findChessboardCorners` method (**lines 44-72**) that initializes `self.objpoints` and `self.imgpoints` lists used then by `cv2.calibrateCamera` method (**line 22**) to compute the camera calibration and distortion coefficients `self.mtx` and `self.dest`. 
 
-I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
-
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
-
-
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
-
-I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
-
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
+I applied this distortion correction to the test image using the `draw_test_undistort` method (**lines 102-108**) in **cell 6** of the IPython notebook and obtained this result: 
 
 ![alt text][image1]
 
 ### Pipeline (single images)
 
 #### 1. Provide an example of a distortion-corrected image.
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
+To demonstrate this step, I will describe how I apply the distortion correction to the test images:
+
 ![alt text][image2]
+
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
 
