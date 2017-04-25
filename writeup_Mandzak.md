@@ -103,5 +103,9 @@ Here's a [link to my video result](./project_video_output.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
-
+In this project I've applied color thresholding that worked well for the challenging part of the Project 1. Applying only horizontal gradient thresholding let me get rid of horizontal distractions in a much efficient way than I've implemented in Project 1.
+In order to make lane lines detection faster full window-search is performed only for the first run or after a failure, otherwise approach based on previous frame results is used.
+In order to tackle challenges of other two advanced videos at least these steps still have to be implemented:
+- implement more advanced outlier rejection that can filter out non-lane lines and noises
+- implement adding each new detection to a weighted mean of the position of the lines to avoid jitter
+- experiment more with color thresholding
