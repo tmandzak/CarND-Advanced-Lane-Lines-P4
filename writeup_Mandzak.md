@@ -38,7 +38,7 @@ The class is instanciated in [P4_Mandzak.ipynb](https://github.com/tmandzak/CarN
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
 The code for this step is contained in the constructor of `AdvancedLaneFinding` class in **lines 10-22** of the file called `AdvancedLaneFinding.py`. First three parameters of the constructor serve as input for calibration. `cal_images = 'camera_cal/calibration*.jpg'` defines a set of calibration images, `cal_nx = 9, cal_ny = 6` defines size of the chess board (see **cell 3** of the IPython notebook). **Line 14** loads `self.findChessboardCorners` method (**lines 44-72**) that initializes `self.objpoints` and `self.imgpoints` lists used then by `cv2.calibrateCamera` method (**line 22**) to compute the camera calibration and distortion coefficients `self.mtx` and `self.dest`. Undistort is implemented in `undistort` method in **lines 99-100**.
-I applied this distortion correction to the test image using the `draw_test_undistort` method (**lines 102-108**) in **cell 6** of the IPython notebook and obtained this result: 
+I applied this distortion correction to the test image in **cell 6** using the `draw_test_undistort` method (**lines 102-108**) and obtained this result: 
 
 ![alt text][image1]
 
