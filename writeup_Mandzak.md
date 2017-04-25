@@ -50,7 +50,7 @@ To demonstrate this step, I apply the distortion correction to the test images:
 ![alt text][image2]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
-I used a combination of color and gradient thresholds to generate a binary image (`mixed_threshold` method at **lines 129-150** in `AdvancedLaneFinding.py` file).  Here's an example of my output for this step generated in the **cell 8** by `draw_test_images_mixed_threshold` method (**lines 176-191**):
+I used a combination of color and gradient thresholds to generate a binary image (`mixed_threshold` method at **lines 129-150** in `AdvancedLaneFinding.py` file).  Here's an example of my output for this step generated in the **cell 8** by `draw_test_images_mixed_threshold` method (**lines 176-191**). Blue and green colors represent results of color and gradient thresholding respectively:
 
 ![alt text][image3]
 
