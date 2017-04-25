@@ -65,7 +65,7 @@ The code for my perspective transform includes a method called `warpPerspective`
 | 693, 454      | 1000, 0       |
 | 1118, 719     | 1000, 719     |
 
-I verified that my perspective transform was working as expected by drawing the `self.src_poly` and `self.dst_poly` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
+I verified that my perspective transform was working as expected by drawing the `self.src_poly` and `self.dst_poly` points onto a test image and its warped counterpart (**cells 9**, `draw_test_images_warped` method defined in **lines 198-230**) to verify that the lines appear parallel in the warped image.
 
 ![alt text][image4]
 
