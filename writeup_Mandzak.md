@@ -31,15 +31,13 @@ The goals / steps of this project are the following:
 #### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
 
 You're reading it! The whole solution is implemented as a class called `AdvancedLaneFinding` defined in [AdvancedLaneFinding.py](https://github.com/tmandzak/CarND-Advanced-Lane-Lines-P4/blob/master/AdvancedLaneFinding.py).
-The class is instanciated in [P4_Mandzak.ipynb](https://github.com/tmandzak/CarND-Advanced-Lane-Lines-P4/blob/master/P4_Mandzak.ipynb) in order to run and test the pipeline step by step and generate illustrations.
-Full run of `P4_Mandzak.ipynb` will produce all [images](https://github.com/tmandzak/CarND-Advanced-Lane-Lines-P4/tree/master/output_images) needed for this writeup as well as a [final video](https://github.com/tmandzak/CarND-Advanced-Lane-Lines-P4/blob/master/project_video_output.mp4).
+The class is instanciated in [P4_Mandzak.ipynb](https://github.com/tmandzak/CarND-Advanced-Lane-Lines-P4/blob/master/P4_Mandzak.ipynb) in order to run and test the pipeline step by step and generate illustrations. Methods starting with `draw_` serve for making illustrations only. Full run of `P4_Mandzak.ipynb` will produce all [images](https://github.com/tmandzak/CarND-Advanced-Lane-Lines-P4/tree/master/output_images) needed for this writeup as well as a [final video](https://github.com/tmandzak/CarND-Advanced-Lane-Lines-P4/blob/master/project_video_output.mp4). Further lines and cells references correspond to `AdvancedLaneFinding.py` and `P4_Mandzak.ipynb` respectively.
 
 ### Camera Calibration
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in the constructor of `AdvancedLaneFinding` class in **lines 10-22** of the file called `AdvancedLaneFinding.py`. First three parameters of the constructor serve as input for calibration: `cal_images = 'camera_cal/calibration*.jpg'` defines a set of calibration images, `cal_nx = 9, cal_ny = 6` defines size of the chess board (see **cell 3** of the IPython notebook). **Line 14** loads `self.findChessboardCorners` method (**lines 44-72**) that initializes `self.objpoints` and `self.imgpoints` lists used then by `cv2.calibrateCamera` method (**line 22**) to compute the camera calibration and distortion coefficients `self.mtx` and `self.dest`. 
-
+The code for this step is contained in the constructor of `AdvancedLaneFinding` class in **lines 10-22** of the file called `AdvancedLaneFinding.py`. First three parameters of the constructor serve as input for calibration. `cal_images = 'camera_cal/calibration*.jpg'` defines a set of calibration images, `cal_nx = 9, cal_ny = 6` defines size of the chess board (see **cell 3** of the IPython notebook). **Line 14** loads `self.findChessboardCorners` method (**lines 44-72**) that initializes `self.objpoints` and `self.imgpoints` lists used then by `cv2.calibrateCamera` method (**line 22**) to compute the camera calibration and distortion coefficients `self.mtx` and `self.dest`. Undistort is implemented in `undistort` method in **lines 99-100**.
 I applied this distortion correction to the test image using the `draw_test_undistort` method (**lines 102-108**) in **cell 6** of the IPython notebook and obtained this result: 
 
 ![alt text][image1]
@@ -47,12 +45,12 @@ I applied this distortion correction to the test image using the `draw_test_undi
 ### Pipeline (single images)
 
 #### 1. Provide an example of a distortion-corrected image.
-To demonstrate this step, I will describe how I apply the distortion correction to the test images:
+To demonstrate this step, I apply the distortion correction to the test images:
 
 ![alt text][image2]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color and gradient thresholds to generate a binary image (`mixed_threshold` method at **lines 129-150** in `AdvancedLaneFinding.py` file).  Here's an example of my output for this step generated in the **cell 8** by `draw_test_images_mixed_threshold` method (**lines 176-191**):
 
 ![alt text][image3]
 
