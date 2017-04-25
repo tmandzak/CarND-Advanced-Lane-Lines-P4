@@ -73,9 +73,10 @@ I verified that my perspective transform was working as expected by drawing the 
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+Code responsible for locating the lane lines and fitting them with 2nd order polynomials is placed in `locateLaneLines` method in **lines 232-354**. This method also returns lane lines curvatures `left_curverad, right_curverad, center_curverad` and car offset from the center of the lane `offset`. Ass suggested in the class lesson full histogram-based window search is performed only for initial recognition and after a fail (**lines 240-300**), for consequent frames faster search based on previous result is applied (**lines 302-310**). Offset is computed in **lines 333-335** and curvatures in **lines 338-348**.
+To present results of lane lines detection following images where generated in **cell 11** with help of `draw_binary_images_lanes_located` method (**lines 401-415**):
 
-![alt text][image5]
+![alt text][image6]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
@@ -85,7 +86,7 @@ I did this in lines # through # in my code in `my_other_file.py`
 
 I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
 
-![alt text][image6]
+
 
 ![alt text][image7]
 
